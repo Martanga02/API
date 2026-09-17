@@ -1,0 +1,41 @@
+services:
+
+  api:
+    build: .
+    ports:
+      - "8081:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: peliculas_db
+      DB_USER: root
+      DB_PASS: root
+      # Origen del frontend para el header CORS (api_router.php). "*" funciona
+      # porque no usamos cookies, pero podés poner http://localhost:5173 si
+      # preferís restringirlo.
+      CORS_ALLOWED_ORIGIN: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: peliculas_db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./tp_parte3/database/peliculas_db.sql:/docker-entrypoint-initdb.d/peliculas_db.sql
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8082:8080"
+
+volumes:
+  db_data:
