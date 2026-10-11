@@ -4,8 +4,8 @@ require_once './app/models/categories.model.php';
 class CategoryApiController {
     private $model;
 
-    public function __construct() {
-        $this->model = new CategoriesModel();
+    public function __construct(?CategoriesModel $model = null) {
+        $this->model = $model ?? new CategoriesModel();
         // no hay vista en la API REST
     }
 

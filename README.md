@@ -20,6 +20,15 @@ Consulta la documentación de la librería de ruteo aquí:
 
 [libs/router/README.md](libs/router/README.md)
 
+## Tests
+
+El proyecto (dentro de `tp_parte3/`) incluye tests unitarios y de integración con PHPUnit. Ver [tp_parte3/tests/README.md](tp_parte3/tests/README.md) para más detalle.
+
+```sh
+cd tp_parte3
+docker compose exec api vendor/bin/phpunit
+```
+
 ## Endpoints
 
 ### Autenticación

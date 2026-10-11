@@ -4,9 +4,9 @@ require_once 'config.php';
 class CategoriesModel {
     private $db;
 
-    public function __construct() {
-        // Conexión a la base (usa la DB compartida)
-        $this->db = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8', DB_USER, DB_PASS);
+    public function __construct(?PDO $db = null) {
+        // Conexión a la base (usa la DB compartida), o la conexión inyectada (p. ej. en tests)
+        $this->db = $db ?? new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8', DB_USER, DB_PASS);
     }
 
     // Obtiene una categoría por ID
