@@ -25,7 +25,7 @@ Consulta la documentación de la librería de ruteo aquí:
 El proyecto (dentro de `tp_parte3/`) incluye tests unitarios y de integración con PHPUnit. Ver [tp_parte3/tests/README.md](tp_parte3/tests/README.md) para más detalle.
 
 ```sh
-cd tp_parte3
+# desde la raíz del repo, con el stack levantado (docker compose up -d)
 docker compose exec api vendor/bin/phpunit
 ```
 
@@ -54,3 +54,4 @@ $router->addMiddleware(new GuardMiddleware());
 $router->addRoute('categoria', 'POST', 'CategoryApiController', 'insertCategory');
 
 ---
+
