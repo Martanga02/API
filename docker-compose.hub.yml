@@ -1,0 +1,58 @@
+# Levanta TODA la app (front + back + db) usando las imágenes publicadas en
+# Docker Hub, sin necesidad de tener el código ni de buildear nada:
+#
+#   DOCKERHUB_USER=tu_usuario docker compose -f docker-compose.hub.yml up -d
+#
+# Front:   http://localhost:5173
+# API:     http://localhost:8081/tp_parte3/api
+# Adminer: http://localhost:8082
+#
+# El script SQL que inicializa la base se monta desde este repo
+# (tp_parte3/database/peliculas_db.sql), así que este archivo se usa
+# parado en la raíz del repo del backend.
+
+services:
+
+  frontend:
+    image: ${DOCKERHUB_USER:-tu_usuario}/cartelera-frontend:latest
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  api:
+    image: ${DOCKERHUB_USER:-tu_usuario}/cartelera-api:latest
+    ports:
+      - "8081:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: peliculas_db
+      DB_USER: root
+      DB_PASS: root
+      CORS_ALLOWED_ORIGIN: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: peliculas_db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./tp_parte3/database/peliculas_db.sql:/docker-entrypoint-initdb.d/peliculas_db.sql
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8082:8080"
+
+volumes:
+  db_data:
