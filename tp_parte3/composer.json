@@ -1,0 +1,13 @@
+{
+    "name": "tuari/tp-parte3",
+    "description": "TP Web II - Parte 3",
+    "require-dev": {
+        "phpunit/phpunit": "^11"
+    },
+    "autoload": {
+        "classmap": [
+            "app/",
+            "libs/"
+        ]
+    }
+}
