@@ -4,16 +4,16 @@ Aplicación de películas y categorías formada por tres servicios:
 
 | Servicio | Tecnología | Puerto | Imagen |
 |---|---|---|---|
-| **Frontend** | React + Vite, servido con nginx | 5173 | `tu_usuario/cartelera-frontend` (propia) |
-| **Backend (API)** | PHP 8.2 + Apache | 8081 | `tu_usuario/cartelera-api` (propia) |
+| **Frontend** | React + Vite, servido con nginx | 5173 | `martinaflorestosini/cartelera-frontend` (propia) |
+| **Backend (API)** | PHP 8.2 + Apache | 8081 | `martinaflorestosinio/cartelera-api` (propia) |
 | **Base de datos** | MySQL 8.0 | (interno) | `mysql:8.0` (oficial, se inicializa con `peliculas_db.sql`) |
 
 Además se levanta **Adminer** (puerto 8082), una página web para ver la base de datos. Es opcional.
 
 El proyecto está en dos repositorios:
 
-- Backend: `https://github.com/<usuario>/<repo-backend>`
-- Frontend: `https://github.com/<usuario>/<repo-frontend>`
+- Backend: [`https://github.com/<usuario>/<repo-backend>`](https://github.com/Martanga02/API)
+- Frontend: [`https://github.com/<usuario>/<repo-frontend>`](https://github.com/Martanga02/FRONTEND-API)
 
 ---
 
@@ -106,8 +106,8 @@ docker compose ps
 
 Las imágenes ya están publicadas:
 
-- `https://hub.docker.com/r/tu_usuario/cartelera-api`
-- `https://hub.docker.com/r/tu_usuario/cartelera-frontend`
+- `https://hub.docker.com/r/martinaflorestosini/cartelera-api`
+- `https://hub.docker.com/r/martinaflorestosini/cartelera-frontend`
 
 Hace falta el repo del **backend** (el compose monta el script SQL de la base desde ahí). Desde su carpeta raíz:
 
@@ -115,14 +115,14 @@ Hace falta el repo del **backend** (el compose monta el script SQL de la base de
 
 ```bash
 cd API-main
-DOCKERHUB_USER=tu_usuario docker compose -f docker-compose.hub.yml up -d
+DOCKERHUB_USER=martinaflorestosini docker compose -f docker-compose.hub.yml up -d
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 cd API-main
-$env:DOCKERHUB_USER="tu_usuario"
+$env:DOCKERHUB_USER="martinaflorestosini"
 docker compose -f docker-compose.hub.yml up -d
 ```
 
@@ -190,12 +190,12 @@ Con la sesión iniciada en Docker Hub (`docker login`, o el botón *Sign in* de 
 
 ```bash
 cd API-main
-docker build -t tu_usuario/cartelera-api:latest .
-docker push tu_usuario/cartelera-api:latest
+docker build -t martinaflorestosini/cartelera-api:latest .
+docker push martinaflorestosini/cartelera-api:latest
 
 cd ../FRONTEND-API-main
-docker build --build-arg VITE_API_BASE_URL=http://localhost:8081/api -t tu_usuario/cartelera-frontend:latest .
-docker push tu_usuario/cartelera-frontend:latest
+docker build --build-arg VITE_API_BASE_URL=http://localhost:8081/api -t martinaflorestosini/cartelera-frontend:latest .
+docker push martinaflorestosini/cartelera-frontend:latest
 ```
 
 El nombre de usuario va en minúsculas. En `docker login`, como contraseña se puede usar un token de acceso (Docker Hub → Account Settings → Personal access tokens).
