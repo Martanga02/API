@@ -46,7 +46,7 @@ jobs:
           : "${HOOK:?DEPLOY_URL vacío: cargá el deploy hook de Render como secret del repo}"
           : "${DH_USER:?DOCKERHUB_USERNAME vacío: cargalo como secret del repo}"
 
-          IMG="docker.io/${DH_USER,,}/cartelera-frontend:${TAG}"
+          IMG="docker.io/${DH_USER,,}/cartelera-api:${TAG}"
           # imgURL va codificada (URL-encoded). Todo lo que no sea el tag tiene que
           # coincidir con la imagen configurada en el servicio de Render.
           ENCODED=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$IMG")
