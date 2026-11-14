@@ -1,8 +1,8 @@
 # Chequeo de dependencias: Dependabot abre pull requests cuando hay versiones nuevas
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: /
+  - package-ecosystem: composer
+    directory: /tp_parte3
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
