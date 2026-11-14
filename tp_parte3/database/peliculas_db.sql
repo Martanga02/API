@@ -1,43 +1,25 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
+-- Script de inicialización para PostgreSQL
 --
--- Servidor: 127.0.0.1
--- Tiempo de generación: 21-11-2025 a las 03:37:14
--- Versión del servidor: 10.4.32-MariaDB
--- Versión de PHP: 8.2.12
-
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
+-- Migrado desde el volcado original de MySQL/MariaDB (phpMyAdmin).
+-- Es idempotente: se puede ejecutar más de una vez sin duplicar datos
+-- (CREATE TABLE IF NOT EXISTS + INSERT ... ON CONFLICT DO NOTHING).
 --
--- Base de datos: `peliculas_db`
---
+-- Se usa en tres lugares:
+--   * docker-compose (se monta en /docker-entrypoint-initdb.d)
+--   * los tests de integración (tests/Integration/bootstrap.php)
+--   * la base de Render (se carga a mano con psql, ver README)
 
 -- --------------------------------------------------------
+-- Tabla genero
+-- --------------------------------------------------------
 
---
--- Estructura de tabla para la tabla `genero`
---
+CREATE TABLE IF NOT EXISTS genero (
+  id SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  descripcion TEXT
+);
 
-CREATE TABLE `genero` (
-  `id` int(11) NOT NULL,
-  `nombre` text NOT NULL,
-  `descripcion` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `genero`
---
-
-INSERT INTO `genero` (`id`, `nombre`, `descripcion`) VALUES
+INSERT INTO genero (id, nombre, descripcion) VALUES
 (2, 'Aventura', 'Historias que implican viajes o exploraciones, a menudo en lugares exóticos o desconocidos. Se centra en la emoción de lo desconocido'),
 (3, 'Comedia', 'Su objetivo principal es hacer reír. Utiliza el humor a través de situaciones absurdas, diálogos graciosos o personajes extravagantes.'),
 (4, 'Drama', 'Se enfoca en el desarrollo emocional de los personajes, tratando temas profundos o realistas. Suele tener un tono serio.'),
@@ -47,118 +29,66 @@ INSERT INTO `genero` (`id`, `nombre`, `descripcion`) VALUES
 (8, 'Romance', 'Centrada en las relaciones amorosas, conflictos emocionales y el viaje sentimental de los personajes.'),
 (9, 'Documental', 'Películas que muestran hechos reales con fines informativos, educativos o de reflexión.'),
 (10, 'Suspenso / Thriller', 'Mantiene al espectador en tensión, con giros inesperados, misterio o peligro constante.'),
-(11, 'Anime', 'El anime es un estilo de animación de origen japonés que se caracteriza por su arte visual único, sus personajes expresivos y narrativas diversas que abarcan desde la fantasía hasta la ciencia ficción y el romance');
+(11, 'Anime', 'El anime es un estilo de animación de origen japonés que se caracteriza por su arte visual único, sus personajes expresivos y narrativas diversas que abarcan desde la fantasía hasta la ciencia ficción y el romance')
+ON CONFLICT (id) DO NOTHING;
 
 -- --------------------------------------------------------
+-- Tabla pelicula
+-- --------------------------------------------------------
 
---
--- Estructura de tabla para la tabla `pelicula`
---
+CREATE TABLE IF NOT EXISTS pelicula (
+  id_pelicula SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  estudio TEXT NOT NULL,
+  id_genero INTEGER NOT NULL REFERENCES genero (id) ON DELETE CASCADE ON UPDATE CASCADE
+);
 
-CREATE TABLE `pelicula` (
-  `id_pelicula` int(11) NOT NULL,
-  `nombre` text NOT NULL,
-  `estudio` text NOT NULL,
-  `id_genero` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE INDEX IF NOT EXISTS pelicula_id_genero_idx ON pelicula (id_genero);
 
---
--- Volcado de datos para la tabla `pelicula`
---
-
-INSERT INTO `pelicula` (`id_pelicula`, `nombre`, `estudio`, `id_genero`) VALUES
+INSERT INTO pelicula (id_pelicula, nombre, estudio, id_genero) VALUES
 (1, 'Dune: Parte Dos', 'Legendary Pictures', 6),
 (2, 'Oppenheimer', 'Universal Pictures', 4),
 (3, 'Barbie', 'Warner Bros', 3),
-(5, 'Nope', 'Universal Pictures', 5);
+(5, 'Nope', 'Universal Pictures', 5)
+ON CONFLICT (id_pelicula) DO NOTHING;
 
 -- --------------------------------------------------------
-
+-- Tabla usuarios
 --
--- Estructura de tabla para la tabla `usuarios`
---
--- Nota: la tabla original se llamaba `user` (columnas `email`/`password`),
--- pero app/models/user.model.php consulta una tabla `usuarios` con columnas
--- `usuario`/`contrasena` (y AuthApiController usa $userFromDB->rol para el
--- JWT). Se renombra acá para que el login funcione, y se agrega `rol` para
--- que el endpoint POST /categoria (que exige ADMIN) sea alcanzable.
---
-
-CREATE TABLE `usuarios` (
-  `id` int(11) NOT NULL,
-  `usuario` varchar(100) NOT NULL,
-  `contrasena` varchar(255) NOT NULL,
-  `rol` varchar(20) NOT NULL DEFAULT 'USER'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Volcado de datos para la tabla `usuarios`
+-- app/models/user.model.php consulta la tabla usuarios con las columnas
+-- usuario/contrasena, y AuthApiController usa el campo rol para el JWT.
 --
 -- Contraseñas de prueba (bcrypt, verificables con password_verify de PHP):
 --   admin / admin123  (rol ADMIN, puede crear categorías)
 --   demo  / demo123   (rol USER)
+-- --------------------------------------------------------
 
-INSERT INTO `usuarios` (`id`, `usuario`, `contrasena`, `rol`) VALUES
+CREATE TABLE IF NOT EXISTS usuarios (
+  id SERIAL PRIMARY KEY,
+  usuario VARCHAR(100) NOT NULL UNIQUE,
+  contrasena VARCHAR(255) NOT NULL,
+  rol VARCHAR(20) NOT NULL DEFAULT 'USER'
+);
+
+INSERT INTO usuarios (id, usuario, contrasena, rol) VALUES
 (1, 'admin', '$2b$10$eBnBBKdRUQScNez/XlXq3uQexjoUAqP2XUlMankHlN8eZxD7b52oa', 'ADMIN'),
-(2, 'demo', '$2b$10$a3UbnmBs/fsssQZUcwQdZ.rHCnyBuDt6/fi.jG9DmnWDNrkCDuNSC', 'USER');
+(2, 'demo', '$2b$10$a3UbnmBs/fsssQZUcwQdZ.rHCnyBuDt6/fi.jG9DmnWDNrkCDuNSC', 'USER')
+ON CONFLICT (id) DO NOTHING;
 
+-- --------------------------------------------------------
+-- Secuencias
 --
--- Índices para tablas volcadas
---
+-- Los INSERT de arriba usan ids explícitos, y en PostgreSQL eso NO avanza el
+-- contador del SERIAL: sin esto, el primer INSERT sin id chocaría con un id ya
+-- existente. Se deja el contador en el valor que tenía en MySQL
+-- (AUTO_INCREMENT 23, 9 y 3), o más arriba si ya hay filas con ids mayores.
+-- --------------------------------------------------------
 
---
--- Indices de la tabla `genero`
---
-ALTER TABLE `genero`
-  ADD PRIMARY KEY (`id`);
+SELECT setval(pg_get_serial_sequence('genero', 'id'), GREATEST(22, (SELECT MAX(id) FROM genero)));
 
---
--- Indices de la tabla `pelicula`
---
-ALTER TABLE `pelicula`
-  ADD PRIMARY KEY (`id_pelicula`),
-  ADD KEY `id_genero` (`id_genero`);
+SELECT setval(pg_get_serial_sequence('pelicula', 'id_pelicula'), GREATEST(8, (SELECT MAX(id_pelicula) FROM pelicula)));
 
---
--- Indices de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `usuario` (`usuario`);
+SELECT setval(pg_get_serial_sequence('usuarios', 'id'), GREATEST(2, (SELECT MAX(id) FROM usuarios)));
 
---
--- AUTO_INCREMENT de las tablas volcadas
---
-
---
--- AUTO_INCREMENT de la tabla `genero`
---
-ALTER TABLE `genero`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
-
---
--- AUTO_INCREMENT de la tabla `pelicula`
---
-ALTER TABLE `pelicula`
-  MODIFY `id_pelicula` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
-
---
--- AUTO_INCREMENT de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- Restricciones para tablas volcadas
---
-
---
--- Filtros para la tabla `pelicula`
---
-ALTER TABLE `pelicula`
-  ADD CONSTRAINT `pelicula_ibfk_1` FOREIGN KEY (`id_genero`) REFERENCES `genero` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
