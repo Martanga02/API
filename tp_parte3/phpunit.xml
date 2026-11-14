@@ -11,4 +11,10 @@
             <directory>tests/Integration</directory>
         </testsuite>
     </testsuites>
+    <!-- Código medido por el coverage: solo la app (controladores y modelos) -->
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
 </phpunit>
