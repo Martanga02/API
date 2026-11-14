@@ -9,56 +9,94 @@ on:
     branches: [main]
 
 jobs:
-  # 1) Tests con coverage y verificación de que el build compila
+  # 1) Tests (unitarios + integración contra PostgreSQL) con coverage
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: peliculas_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
     env:
+      # config.php lee estas variables de entorno
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: peliculas_db
+      DB_USER: postgres
+      DB_PASS: postgres
       # Opcional: si existe el secret, el coverage se sube a Codecov
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    defaults:
+      run:
+        working-directory: tp_parte3
+
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          node-version: 20
+          php-version: "8.2"
+          extensions: pdo, pdo_pgsql
+          coverage: pcov # driver que mide qué líneas ejecutan los tests
+          tools: composer:v2
 
-      # Con package-lock.json usa npm ci (instalación exacta); sin él, npm install.
-      - name: Instalar dependencias
-        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Instalar dependencias (PHPUnit)
+        run: composer install --no-interaction --prefer-dist
 
-      - name: Tests (con coverage)
-        run: npm run test:coverage
+      - name: Tests unitarios (con coverage)
+        run: vendor/bin/phpunit --testsuite Unit --coverage-text --coverage-clover coverage-unit.xml
 
-      - name: Guardar reporte de coverage
+      - name: Tests de integración (con coverage, contra el PostgreSQL del servicio)
+        run: vendor/bin/phpunit --testsuite Integration --coverage-text --coverage-clover coverage-integration.xml
+
+      - name: Guardar reportes de coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-frontend
-          path: coverage/
+          name: coverage-backend
+          path: tp_parte3/coverage-*.xml
 
       - name: Subir coverage a Codecov (solo si existe el secret)
         if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/lcov.info
+          files: tp_parte3/coverage-unit.xml,tp_parte3/coverage-integration.xml
           fail_ci_if_error: false
 
-      - name: Build de producción
-        run: npm run build
-
-  # 2) Calidad de código: análisis estático con oxlint (informativo, no frena el pipeline)
+  # 2) Calidad de código: sintaxis (bloqueante) y análisis estático (informativo)
   quality:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tp_parte3
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          node-version: 20
+          php-version: "8.2"
+          tools: composer:v2, phpstan
 
-      - name: oxlint
+      - name: Instalar dependencias
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Chequeo de sintaxis PHP
+        run: find app -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Análisis estático con PHPStan (informativo, no frena el pipeline)
         continue-on-error: true
-        run: npx --yes oxlint@1 src/
+        run: phpstan analyse app --level=1 --no-progress --autoload-file=vendor/autoload.php
 
   # 3) Construye la imagen. En PRs solo se valida; en push a main (o tag) se publica en Docker Hub.
   #    No se publica nada si los tests fallan.
@@ -99,7 +137,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME || 'local' }}/cartelera-frontend
+          images: ${{ secrets.DOCKERHUB_USERNAME || 'local' }}/cartelera-api
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -113,11 +151,6 @@ jobs:
           context: .
           platforms: linux/amd64 # Render solo acepta imágenes linux/amd64
           push: ${{ steps.check.outputs.publish == 'true' }}
-          # Vite "hornea" esta URL en el bundle al buildear. Por defecto apunta al
-          # backend local; para Render se define la variable del repo VITE_API_BASE_URL
-          # (Settings, Secrets and variables, Actions, Variables) con la URL pública de la API.
-          build-args: |
-            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'http://localhost:8081/api' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
