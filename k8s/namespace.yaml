@@ -1,0 +1,5 @@
+# Un namespace agrupa todos los recursos de la app, separados del resto del cluster
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cartelera

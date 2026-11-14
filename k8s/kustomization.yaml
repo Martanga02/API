@@ -1,0 +1,15 @@
+# Se aplica todo junto con:  kubectl apply -k k8s/
+namespace: cartelera
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - api.yaml
+  - frontend.yaml
+
+# Crea el ConfigMap "postgres-init" con el script SQL que inicializa la base
+# (copia de tp_parte3/database/peliculas_db.sql; si cambia el original, copiarlo de nuevo).
+configMapGenerator:
+  - name: postgres-init
+    files:
+      - peliculas_db.sql

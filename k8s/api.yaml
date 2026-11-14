@@ -1,0 +1,123 @@
+# --- API (PHP + Apache): ConfigMap + ReplicaSet (3 réplicas) + Service NodePort + HPA ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  DB_HOST: postgres # nombre del Service de la base
+  DB_PORT: "5432"
+  DB_NAME: peliculas_db
+  DB_USER: postgres
+  CORS_ALLOWED_ORIGIN: "*"
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: api
+  labels:
+    app: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      # Espera a que PostgreSQL acepte conexiones antes de arrancar la API
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z postgres 5432; do echo esperando a postgres; sleep 2; done"]
+      containers:
+        - name: api
+          # Imagen local: docker build -t cartelera-api:local .
+          image: cartelera-api:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: api-config
+          env:
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          # Sin "requests" de CPU el autoscaler (HPA) no puede calcular el porcentaje de uso.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /api/healthcheck
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          readinessProbe:
+            httpGet:
+              path: /api/healthcheck
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/healthcheck
+              port: http
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels:
+    app: api
+spec:
+  type: NodePort
+  selector:
+    app: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      # Acceso local: http://localhost:30081/api/categoria
+      nodePort: 30081
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: ReplicaSet
+    name: api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # % del CPU pedido por pod (100m, o sea 70m)
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2 # suma como máximo 2 pods
+          periodSeconds: 30 # cada 30 s
+    scaleDown:
+      stabilizationWindowSeconds: 300 # espera 5 min de baja carga antes de sacar pods
+      policies:
+        - type: Pods
+          value: 1 # saca como máximo 1 pod
+          periodSeconds: 60 # cada 60 s
