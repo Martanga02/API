@@ -24,6 +24,7 @@ require_once './app/middlewares/guard-api.middleware.php';
 require_once './app/controllers/categories-api.controller.php';
 require_once 'app/controllers/pelicula.api.controller.php';
 require_once './app/controllers/auth-api.controller.php';
+require_once './app/controllers/health-api.controller.php';
 
 // instancio el router
 $router = new Router();
@@ -31,6 +32,8 @@ $router = new Router();
 // --- Middleware que valida el token JWT (para todos los endpoints) ---
 $router->addMiddleware(new JWTMiddleware());
 
+// --- Health check (sin autenticación ni base de datos) ---
+$router->addRoute('healthcheck', 'GET', 'HealthApiController', 'check');
 // --- Rutas públicas de categorias ---
 $router->addRoute('auth/login', 'GET', 'AuthApiController', 'login');
 $router->addRoute('categoria', 'GET', 'CategoryApiController', 'getCategories');
