@@ -1,22 +1,28 @@
 <?php
 
-// Opens a PDO connection to a dedicated `peliculas_db_test` schema on the
-// same MySQL server used by docker-compose (see config.php / DB_HOST),
-// creating and seeding it from database/peliculas_db.sql on first run.
-// Never touches the real `peliculas_db` schema.
+// Abre una conexión PDO a una base dedicada `peliculas_db_test` en el mismo
+// servidor PostgreSQL que usa docker-compose (ver config.php / DB_HOST),
+// creándola y cargándola desde database/peliculas_db.sql la primera vez.
+// Nunca toca la base real `peliculas_db`.
 function integration_test_pdo(): PDO
 {
     $testDbName = getenv('DB_TEST_NAME') ?: 'peliculas_db_test';
 
-    $setup = new PDO('mysql:host=' . DB_HOST . ';charset=utf8mb4', DB_USER, DB_PASS);
-    $setup->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $setup->exec("CREATE DATABASE IF NOT EXISTS `$testDbName`");
+    // Para crear una base hay que conectarse a otra que ya exista: `postgres`
+    // es la base de mantenimiento que PostgreSQL trae siempre.
+    $setup = db_connect('postgres');
+    $exists = $setup->prepare('SELECT 1 FROM pg_database WHERE datname = ?');
+    $exists->execute([$testDbName]);
+    if (!$exists->fetchColumn()) {
+        // El nombre sale de una variable de entorno nuestra; se escapa igual por prolijidad.
+        $setup->exec('CREATE DATABASE "' . str_replace('"', '""', $testDbName) . '"');
+    }
     $setup = null;
 
-    $pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . $testDbName . ';charset=utf8mb4', DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = db_connect($testDbName);
 
-    $alreadySeeded = $pdo->query("SHOW TABLES LIKE 'genero'")->fetch();
+    // to_regclass devuelve NULL si la tabla no existe: en ese caso hay que cargar el script.
+    $alreadySeeded = $pdo->query("SELECT to_regclass('public.genero')")->fetchColumn();
     if (!$alreadySeeded) {
         seed_integration_test_db($pdo);
     }
@@ -33,7 +39,7 @@ function seed_integration_test_db(PDO $pdo): void
         if ($statement === '') {
             continue;
         }
-        // Skip chunks that are only "-- ..." comment lines (no real SQL in them).
+        // Saltea los pedazos que son solo comentarios "-- ..." (sin SQL real).
         if (trim(preg_replace('/^--.*$/m', '', $statement)) === '') {
             continue;
         }
