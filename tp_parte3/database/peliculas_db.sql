@@ -90,5 +90,3 @@ SELECT setval(pg_get_serial_sequence('pelicula', 'id_pelicula'), GREATEST(8, (SE
 
 SELECT setval(pg_get_serial_sequence('usuarios', 'id'), GREATEST(2, (SELECT MAX(id) FROM usuarios)));
 
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
