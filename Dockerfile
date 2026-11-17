@@ -1,9 +1,10 @@
 FROM php:8.2-apache
 
-# Composer necesita unzip (o la extensión zip) para extraer los paquetes que instala más abajo
-RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
+# unzip: Composer lo necesita para extraer los paquetes que instala más abajo.
+# libpq-dev: librería cliente de PostgreSQL, necesaria para compilar pdo_pgsql.
+RUN apt-get update && apt-get install -y --no-install-recommends unzip libpq-dev && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-install pdo pdo_pgsql
 
 RUN a2enmod rewrite
 
