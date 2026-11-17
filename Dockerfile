@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.5-apache
 
 # unzip: Composer lo necesita para extraer los paquetes que instala más abajo.
 # libpq-dev: librería cliente de PostgreSQL, necesaria para compilar pdo_pgsql.
